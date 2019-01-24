@@ -4,11 +4,17 @@ import React, {
 import {
   withRouter
 } from 'react-router-dom';
+import { connect } from 'react-redux';
+import Loading from '../../components/Loading';
 import { getRecommendList } from '../../api/index';
 import {
   imageRatio,
   formatPlayCount
 } from '../../commons/js/utils'
+import {
+  getChangeCurrentMusicListAction,
+  getMusicListDetailAction
+} from '../../store/actionCreator';
 import './index.scss';
 class Recommend extends Component {
   constructor (props) {
@@ -16,7 +22,7 @@ class Recommend extends Component {
     this.state = {
       recommendList: [],
       gotRecomment: false,
-      showLoading: false
+      showLoading: true
     }
   }
 
@@ -43,8 +49,19 @@ class Recommend extends Component {
     })
     .catch(err => {})
   }
+  // 列表滚动
   handleScroll = () => {
-
+    const recommendList = this.refs.recommendList
+    const scrollAtBottom = recommendList.scrollHeight - (recommendList.scrollTop + recommendList.clientHeight) === 0
+    if(scrollAtBottom && !this.state.gotRecommend) {
+      this.setState(() => ({
+        gotRecommend: true,
+        showLoding: false
+      }), ()=> {
+        const index = this.state.recommendList.length - 1
+        this.handleGetRecommendList(this.state.recommendList[index].updateTime)
+      })
+    }
   }
   // 渲染推荐列表
   renderRecommendList() {
@@ -56,7 +73,7 @@ class Recommend extends Component {
         <li key={item.id}>
           <div
             className="list-img-container"
-            // onClick={() => this.props.handleGetMusicListDetail(item.id)}
+            onClick={() => this.props.handleGetMusicListDetail(item.id)}
           >
             <i className="iconfont icon-play" />
             <img className="list-img" src={item.coverImgUrl + imageRatio(153)} alt="" />
@@ -89,12 +106,35 @@ class Recommend extends Component {
         ref="recommendList"
         >
           {this.renderRecommendList()}
+          {this.state.showLoading && <Loading />}
         </ul>
       </div>
     );
   }
 }
+const mapStateToProps = (state) => {
+  return {
+    showMusicList: state.showMusicList,
+    showSingerInfo: state.showSingerInfo
+  };
+};
+const mapDispatchToProps = (dispatch) => {
+  return {
+    handleChangeCurrentMusicList(list) {
+      dispatch(getChangeCurrentMusicListAction(list))
+    },
+    handleGetMusicListDetail(id) {
+      dispatch(getMusicListDetailAction(id))
+    }
+  }
+}
 
+// export default withRouter(
+//   Recommend
+// );
 export default withRouter(
-  Recommend
+  connect(
+    mapStateToProps,
+    mapDispatchToProps
+  )(Recommend)
 );

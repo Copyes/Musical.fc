@@ -1,23 +1,68 @@
 import React, {
   Component
-} from 'react';
-import { withRouter } from 'react-router-dom';
-import { If, Then, Else } from 'react-if';
-import { PLAY_MODE_TYPES } from '../../commons/js/config';
-import { findIndex, imageRatio, format } from '../../commons/js/utils.js';
-import './index.scss';
-import ProgressBar from '../ProgressBar';
-class Player extends Component {
+} from 'react'
+import { withRouter } from 'react-router-dom'
+import { connect } from 'react-redux'
+import { If, Then, Else } from 'react-if'
+import { PLAY_MODE_TYPES } from '../../commons/js/config'
+import { findIndex, imageRatio, format } from '../../commons/js/utils.js'
+import { getChangePlayingStatusAction } from '../../store/actionCreator'
+import ProgressBar from '../ProgressBar'
+import PlayList from '../PlayList'
+import './index.scss'
 
+export const PLAYING_STATUS = {
+  PAUSED: true,
+  PLAYING: false
+}
+class Player extends Component {
+  constructor(props){
+    super(props)
+
+    this.state = {
+      showPlayList: false
+    }
+  }
   componentWillReceiveProps ({ playing }) {
     if (!playing) {
-      this.refs.audio.pause();
+      this.refs.audio.pause()
     }
   }
   volumeChange = () => {}
   handleShowMusicDetial = () => {}
   percentChange = () => {}
   percentChangeEnd = () => {}
+  handleUpdateTime = () => {}
+  handlePlayNextMusic = () => {}
+  // 展示当前播放列表
+  handleShowPlayList = () => {
+    if(!this.state.showPlayList) {
+      document.addEventListener('click', this.handleShowPlayList)
+    } else {
+      document.removeEventListener('click', this.handleShowPlayList)
+    }
+    this.setState((prevState) => ({
+      showPlayList: !prevState.showPlayList
+    }), 
+    () => {
+      this.refs.playList.scrollToCurrentMusic()
+    })
+  }
+  // 改变当前播放动态
+  handleChangePlayingStatus = (status) => {
+    if(this.props.playList && this.props.playList.length === 0){
+      return
+    }
+    console.log(status)
+    this.props.changePlayingStatus(status)
+    const audio = this.refs.audio
+    if(status === PLAYING_STATUS.PAUSED){
+      audio.play()
+    } else {
+      audio.pause()
+    }
+
+  }
   // 渲染播放控制器
   renderPlayerControl() {
     return (
@@ -33,17 +78,17 @@ class Player extends Component {
               {/* 如果正在播放，显示暂停按钮 */}
               <Then>
                 <i className="iconfont icon-stop"
-                  // onClick={() =>
-                  //   this.handleChangePlayingStatus(PLAYING_STATUS.paused)
-                  // }
+                  onClick={() =>
+                    this.handleChangePlayingStatus(PLAYING_STATUS.PAUSED)
+                  }
                 />
               </Then>
               {/* 如果音乐暂停，显示播放按钮 */}
               <Else>
                 <i className="iconfont icon-bofangicon"
-                  // onClick={() =>
-                  //   this.handleChangePlayingStatus(PLAYING_STATUS.playing)
-                  // }
+                  onClick={() =>
+                    this.handleChangePlayingStatus(PLAYING_STATUS.PLAYING)
+                  }
                 />
               </Else>
             </If>
@@ -62,7 +107,7 @@ class Player extends Component {
     return (
       <div className="right-control-btn">
         <i className="iconfont icon-list"
-          // onClick={this.handleShowPlayList}
+          onClick={this.handleShowPlayList}
         />
         <div className="change-play-mode">
           <i className={[
@@ -100,17 +145,17 @@ class Player extends Component {
     )
   }
   render() {
-
+    const { currentMusic } = this.props
+    console.log(currentMusic)
     return (
       <div className="player-container">
         <div className="player-left-container">
           <div className="music-img" onClick={this.handleShowMusicDetial}>
-            {/* <img src={currentMusic ? currentMusic.imgUrl + imageRatio(64) : ''} alt="" /> */}
+            <img src={currentMusic ? currentMusic.imgUrl + imageRatio(64) : ''} alt="" />
           </div>
           <div className="music-info">
             <p className="music-name" onClick={this.handleShowMusicDetial}>
-              {/* {currentMusic ? currentMusic.musicName : ''} */}
-              {'以父之名'}
+              {currentMusic ? currentMusic.musicName : ''}
               <If condition={true}>
                 <Then>
                   <span className="like-music" 
@@ -170,8 +215,44 @@ class Player extends Component {
             />
           </div>
         </div>
+        <div
+          className={`${
+            this.state.showPlayList ? '' : 'hide-play-list'
+          } play-list-container`}
+        >
+          <PlayList ref="playList" showPlayList={this.state.showPlayList}/>
+        </div>
+        <audio
+          autoPlay
+          src={currentMusic ? currentMusic.musicUrl : ''}
+          ref="audio"
+          onTimeUpdate={this.handleUpdateTime}
+          onEnded={this.handlePlayNextMusic}
+        />
       </div>
     )
   }
 }
-export default Player
+
+const mapStateToProps = (state) => {
+  return {
+    playing: state.playing,
+    currentMusic: state.currentMusic,
+    playList: state.playList
+  }
+}
+
+const mapDispatchToProps = (dispatch) => {
+  return {
+    changePlayingStatus(status) {
+      dispatch(getChangePlayingStatusAction(status))
+    }
+  }
+}
+
+export default withRouter(
+  connect(
+    mapStateToProps,
+    mapDispatchToProps
+  )(Player)
+)

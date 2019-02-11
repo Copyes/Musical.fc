@@ -13,6 +13,9 @@ const defaultState = {
   // 控制歌手详情的显示
   showSingerInfo: false,
 
+  // 控制歌曲详情的展示
+  showMusicDetail: false,
+
   // 歌手详情
   singerInfo: null,
 
@@ -46,6 +49,7 @@ const defaultState = {
 export default (state = defaultState, action) => {
   if(action.type === types.CHANGE_CURRENT_MUSIC_LIST){
     const newState = deepCopy(state)
+    console.log(action.value)
     newState.musicList = action.value
     if(action.value){
       newState.showMusicList = true
